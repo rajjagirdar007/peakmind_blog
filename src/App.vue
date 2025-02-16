@@ -1,61 +1,65 @@
 <template>
   <div id="app">
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-      <div class="container">
-        <router-link class="navbar-brand" to="/">PeakMind</router-link>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav mr-auto">
-            <li class="nav-item">
-              <router-link class="nav-link" to="/">Home</router-link>
-            </li>
-            <li class="nav-item" v-if="isLoggedIn">
-              <router-link class="nav-link" to="/profile">Profile</router-link>
-            </li>
-            <li class="nav-item" v-if="isLoggedIn">
-              <router-link class="nav-link" to="/admin">Admin</router-link>
-            </li>
-          </ul>
-          <ul class="navbar-nav ml-auto">
-            <li class="nav-item" v-if="!isLoggedIn">
-              <router-link class="nav-link" to="/login">Login</router-link>
-            </li>
-            <li class="nav-item" v-if="isLoggedIn">
-              <button @click="logout" class="btn btn-outline-light">Logout</button>
-            </li>
-          </ul>
+    <template v-if="authReady">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+          <router-link class="navbar-brand" to="/">PeakMind</router-link>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+              <li class="nav-item">
+                <router-link class="nav-link" to="/">Home</router-link>
+              </li>
+              <li class="nav-item" v-if="isAuthenticated">
+                <router-link class="nav-link" to="/profile">Profile</router-link>
+              </li>
+              <li class="nav-item" v-if="isAdmin">
+                <router-link class="nav-link" to="/admin">Admin</router-link>
+              </li>
+            </ul>
+            <ul class="navbar-nav ml-auto">
+              <li class="nav-item" v-if="!isAuthenticated">
+                <router-link class="nav-link" to="/login">Login</router-link>
+              </li>
+              <li class="nav-item" v-if="isAuthenticated">
+                <button @click="logout" class="btn btn-outline-light">Logout</button>
+              </li>
+            </ul>
+          </div>
         </div>
+      </nav>
+      <router-view />
+    </template>
+    <div v-else class="loading-screen">
+      <div class="spinner-border" role="status">
+        <span class="sr-only">Loading...</span>
       </div>
-    </nav>
-    <router-view/>
+    </div>
   </div>
 </template>
+
 <script>
-import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
+import { mapGetters } from 'vuex';
 
 export default {
   name: 'App',
-  data() {
-    return {
-      isLoggedIn: false
-    };
+  computed: {
+    ...mapGetters(['isAuthenticated', 'authReady'])
   },
   methods: {
-    logout() {
+    async logout() {
       const auth = getAuth();
-      signOut(auth).then(() => {
-        this.isLoggedIn = false;
+      try {
+        await signOut(auth);
+        await this.$store.dispatch('signOut');
         this.$router.push('/login');
-      });
+      } catch (error) {
+        console.error('Error signing out:', error);
+      }
     }
-  },
-  created() {
-    const auth = getAuth();
-    onAuthStateChanged(auth, user => {
-      this.isLoggedIn = !!user;
-    });
   }
 }
 </script>
